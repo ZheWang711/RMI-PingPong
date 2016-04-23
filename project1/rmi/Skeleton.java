@@ -1,6 +1,9 @@
 package rmi;
 
+import java.lang.reflect.Method;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /** RMI skeleton
 
@@ -45,9 +48,9 @@ public class Skeleton<T>
         @throws NullPointerException If either of <code>c</code> or
                                      <code>server</code> is <code>null</code>.
      */
-    public Skeleton(Class<T> c, T server)
+    public Skeleton(Class<T> c, T server) throws NullPointerException, Error
     {
-        throw new UnsupportedOperationException("not implemented");
+        this(c,server,new InetSocketAddress(8888));
     }
 
     /** Creates a <code>Skeleton</code> with the given initial server address.
@@ -69,8 +72,42 @@ public class Skeleton<T>
                                      <code>server</code> is <code>null</code>.
      */
     public Skeleton(Class<T> c, T server, InetSocketAddress address)
+            throws NullPointerException, Error
     {
-        throw new UnsupportedOperationException("not implemented");
+        if(c == null || server == null)
+        {
+            throw new NullPointerException("The template class or instance" +
+                    "for creating the Skeleton is NULL.");
+        }
+
+        try
+        {
+            boolean rmiexp;
+
+            if(!c.isInterface())
+                throw new Error("The template is not an interface.");
+
+            for(Method s : c.getMethods())
+            {
+                rmiexp = false;
+
+                for(Class<?> exp : s.getExceptionTypes())
+                    if(exp.getCanonicalName().equals("rmi.RMIException"))
+                    {
+                        rmiexp = true;
+                        break;
+                    }
+
+                if(!rmiexp)
+                    throw new Error("The Methods in template class don't throw RMIException.");
+
+            }
+        }
+        catch(SecurityException e)
+        {
+            System.out.println("Get Methods is blocked by securityreasons.");
+            e.printStackTrace();
+        }
     }
 
     /** Called when the listening thread exits.

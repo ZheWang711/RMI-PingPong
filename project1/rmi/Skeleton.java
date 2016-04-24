@@ -252,7 +252,7 @@ public class Skeleton<T>
         tlisten = null;
     }
 
-    public synchronized Object Run(String mname, Integer npara, Object[] args)
+    public synchronized Object Run(String mname, Object[] args)
             throws Exception
     {
         Method m;
@@ -373,7 +373,6 @@ public class Skeleton<T>
             ObjectInputStream ois = null;
             ObjectOutputStream oos = null;
             String mname = null;
-            Integer npara = null;
 
             while(!stop)
             {
@@ -387,21 +386,22 @@ public class Skeleton<T>
                     oos.flush();
 
                     mname = (String) ois.readObject();
-                    npara = (Integer) ois.readObject();
 
-                    List<Object> plist = new ArrayList<Object>();
+                    Object[] plist = (Object[])ois.readObject();
 
-                    for (int i = 0; i < npara; i++)
-                        plist.add(ois.readObject());
-
-                    Object[] args = plist.toArray();
-
-
-                    gfather.Run(mname, npara, args);
+                    oos.writeObject(gfather.Run(mname, plist));
 
                 }
                 catch (Exception e) {}
             }
+
+            try
+            {
+                ois.close();
+                oos.close();
+                socket.close();
+            }
+            catch(Exception e) {}
         }
     }
 

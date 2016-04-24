@@ -234,7 +234,7 @@ public class Skeleton<T>
             tlisten.join();
         }
         catch(Exception e) {}
-        tlisten = null;
+        //tlisten = null;
     }
 
 

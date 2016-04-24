@@ -1,7 +1,11 @@
 package rmi;
 
+import com.sun.javaws.exceptions.InvalidArgumentException;
+
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.*;
+import java.nio.channels.IllegalBlockingModeException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,6 +33,12 @@ import java.util.List;
 */
 public class Skeleton<T>
 {
+
+    private ServerSocket socket = null;
+    private SocketAddress address = null;
+    private TCPListen tlisten = null;
+
+
     /** Creates a <code>Skeleton</code> with no initial server address. The
         address will be determined by the system when <code>start</code> is
         called. Equivalent to using <code>Skeleton(null)</code>.
@@ -50,7 +60,7 @@ public class Skeleton<T>
      */
     public Skeleton(Class<T> c, T server) throws NullPointerException, Error
     {
-        this(c,server,new InetSocketAddress(8888));
+        this(c,server,new InetSocketAddress(7000));
     }
 
     /** Creates a <code>Skeleton</code> with the given initial server address.
@@ -105,9 +115,12 @@ public class Skeleton<T>
         }
         catch(SecurityException e)
         {
-            System.out.println("Get Methods is blocked by securityreasons.");
+            System.out.println("Get Methods is blocked by security reasons.");
             e.printStackTrace();
         }
+
+        this.address = address;
+
     }
 
     /** Called when the listening thread exits.
@@ -178,7 +191,30 @@ public class Skeleton<T>
      */
     public synchronized void start() throws RMIException
     {
-        throw new UnsupportedOperationException("not implemented");
+        try
+        {
+            socket = new ServerSocket();
+        }
+        catch(Exception e)
+        {
+            System.out.println("Skeleton TCP socket open error.");
+            e.printStackTrace();
+            throw new RMIException("Skeleton TCP socket open error.");
+        }
+
+        try
+        {
+            socket.bind(address);
+        }
+        catch(Exception e)
+        {
+            e.printStackTrace();
+            throw new RMIException("Skeleton TCP socket bind error.");
+        }
+
+        tlisten = new TCPListen(socket, this);
+        tlisten.start();
+
     }
 
     /** Stops the skeleton server, if it is already running.
@@ -192,6 +228,81 @@ public class Skeleton<T>
      */
     public synchronized void stop()
     {
-        throw new UnsupportedOperationException("not implemented");
+        tlisten.terminate();
+        try
+        {
+            tlisten.join();
+        }
+        catch(Exception e) {}
+        tlisten = null;
     }
+
+
+    private class TCPListen extends Thread
+    {
+        private ServerSocket socket;
+        private volatile boolean stop = false;
+        private Skeleton<T> father;
+        private List<SocketConn> tsockets = new ArrayList<SocketConn>();
+
+        public TCPListen(ServerSocket socket, Skeleton<T> father)
+        {
+            this.socket = socket;
+            this.father = father;
+        }
+
+        public void terminate()
+        {
+            stop = true;
+            try
+            {
+                socket.close();
+            }
+            catch(Exception e) {}
+
+            father.stopped(null);
+        }
+
+        public void run()
+        {
+            while(!stop)
+            {
+
+                try
+                {
+                    Socket conn = socket.accept();
+                }
+                catch(SocketException e) {}
+                catch(Exception e)
+                {
+                    e.printStackTrace();
+                    father.listen_error(e);
+                    father.stopped(e);
+                }
+
+
+
+
+            }
+        }
+    }
+
+    private class SocketConn extends Thread
+    {
+        private Socket socket;
+
+        public SocketConn(Socket socket)
+        {
+            this.socket=socket;
+        }
+
+        public void run()
+        {
+
+        }
+
+    }
+
+
+
 }

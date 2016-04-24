@@ -312,7 +312,10 @@ public class Skeleton<T>
                 {
                     conn = serversocket.accept();
                 }
-                catch(SocketException e) {}
+                catch(SocketException e)
+                {
+                    if(stop) return;
+                }
                 catch(Exception e)
                 {
                     e.printStackTrace();
@@ -377,17 +380,17 @@ public class Skeleton<T>
 
             try
             {
+                oos = new ObjectOutputStream(socket.getOutputStream());
+                oos.flush();
+
                 while (socket.getInputStream().available() <= 0)
                     sleep(1);
 
                 if(stop) return;
 
                 ois = new ObjectInputStream(socket.getInputStream());
-                oos = new ObjectOutputStream(socket.getOutputStream());
-                oos.flush();
 
                 mname = (String) ois.readObject();
-
                 plist = (Object[])ois.readObject();
 
             }

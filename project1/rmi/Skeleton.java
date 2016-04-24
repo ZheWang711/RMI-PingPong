@@ -240,14 +240,14 @@ public class Skeleton<T>
 
     private class TCPListen extends Thread
     {
-        private ServerSocket socket;
+        private ServerSocket serversocket;
         private volatile boolean stop = false;
         private Skeleton<T> father;
         private List<SocketConn> tsockets = new ArrayList<SocketConn>();
 
         public TCPListen(ServerSocket socket, Skeleton<T> father)
         {
-            this.socket = socket;
+            this.serversocket = socket;
             this.father = father;
         }
 
@@ -256,7 +256,7 @@ public class Skeleton<T>
             stop = true;
             try
             {
-                socket.close();
+                serversocket.close();
             }
             catch(Exception e) {}
 
@@ -271,7 +271,7 @@ public class Skeleton<T>
             {
                 try
                 {
-                    conn = socket.accept();
+                    conn = serversocket.accept();
                 }
                 catch(SocketException e) {}
                 catch(Exception e)
@@ -282,7 +282,11 @@ public class Skeleton<T>
                 }
 
                 if(conn != null)
-                    tsockets.add(new SocketConn(conn));
+                {
+                    SocketConn tmp = new SocketConn(conn);
+                    tsockets.add(tmp);
+                    tmp.start();
+                }
 
             }
 
@@ -314,9 +318,6 @@ public class Skeleton<T>
         {
 
         }
-
     }
-
-
 
 }

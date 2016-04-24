@@ -252,21 +252,15 @@ public class Skeleton<T>
         tlisten = null;
     }
 
-    public synchronized Object Run(String mname, Object[] args)
+    public synchronized Object Run(String mname, Class<?> ptype, Object[] args)
             throws Exception
     {
         Method m;
-        List<Class<?>> ptype = new ArrayList<Class<?>>();
-        Class<?> ptypes[] = null;
         Object retv = null;
-
-        for(Object arg : args)
-            ptype.add(arg.getClass());
 
         try
         {
-            ptype.toArray(ptypes);
-            m = c.getMethod(mname, ptypes);
+            m = c.getMethod(mname, ptype);
             retv = m.invoke(server, args);
         }
         catch(Exception e)
@@ -377,6 +371,7 @@ public class Skeleton<T>
             ObjectOutputStream oos = null;
             String mname = null;
             Object[] plist = null;
+            Class<?> ptype = null;
 
             try
             {
@@ -391,6 +386,7 @@ public class Skeleton<T>
                 ois = new ObjectInputStream(socket.getInputStream());
 
                 mname = (String) ois.readObject();
+                ptype = (Class <?>) ois.readObject();
                 plist = (Object[])ois.readObject();
 
             }
@@ -401,7 +397,7 @@ public class Skeleton<T>
 
             try
             {
-                oos.writeObject(gfather.Run(mname, plist));
+                oos.writeObject(gfather.Run(mname, ptype, plist));
             }
             catch(Exception e)
             {

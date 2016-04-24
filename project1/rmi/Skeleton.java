@@ -373,26 +373,36 @@ public class Skeleton<T>
             ObjectInputStream ois = null;
             ObjectOutputStream oos = null;
             String mname = null;
+            Object[] plist = null;
 
-            while(!stop)
+            try
             {
-                try
-                {
-                    while (socket.getInputStream().available() <= 0)
-                        sleep(1);
+                while (socket.getInputStream().available() <= 0)
+                    sleep(1);
 
-                    ois = new ObjectInputStream(socket.getInputStream());
-                    oos = new ObjectOutputStream(socket.getOutputStream());
-                    oos.flush();
+                if(stop) return;
 
-                    mname = (String) ois.readObject();
+                ois = new ObjectInputStream(socket.getInputStream());
+                oos = new ObjectOutputStream(socket.getOutputStream());
+                oos.flush();
 
-                    Object[] plist = (Object[])ois.readObject();
+                mname = (String) ois.readObject();
 
-                    oos.writeObject(gfather.Run(mname, plist));
+                plist = (Object[])ois.readObject();
 
-                }
-                catch (Exception e) {}
+            }
+            catch (Exception e)
+            {
+                if(stop) return;
+            }
+
+            try
+            {
+                oos.writeObject(gfather.Run(mname, plist));
+            }
+            catch(Exception e)
+            {
+
             }
 
             try

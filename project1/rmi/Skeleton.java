@@ -128,6 +128,11 @@ public class Skeleton<T>
 
         this.address = address;
 
+        /*
+        TODO: Check in constructors of Skeleton and Stub
+        whether the object passed in actually implemented the interface.
+        */
+
     }
 
     /** Called when the listening thread exits.
@@ -248,8 +253,28 @@ public class Skeleton<T>
     }
 
     public synchronized Object Run(String mname, Integer npara, Object[] args)
+            throws Exception
     {
+        Method m;
+        List<Class<?>> ptype = new ArrayList<Class<?>>();
+        Class<?> ptypes[] = null;
+        Object retv = null;
 
+        for(Object arg : args)
+            ptype.add(arg.getClass());
+
+        try
+        {
+            ptype.toArray(ptypes);
+            m = c.getMethod(mname, ptypes);
+            retv = m.invoke(server, args);
+        }
+        catch(Exception e)
+        {
+            throw e;
+        }
+
+        return retv;
     }
 
 
@@ -370,6 +395,7 @@ public class Skeleton<T>
                         plist.add(ois.readObject());
 
                     Object[] args = plist.toArray();
+
 
                     gfather.Run(mname, npara, args);
 

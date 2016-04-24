@@ -3,6 +3,8 @@ package rmi;
 import com.sun.javaws.exceptions.InvalidArgumentException;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.Method;
 import java.net.*;
 import java.nio.channels.IllegalBlockingModeException;
@@ -228,13 +230,16 @@ public class Skeleton<T>
      */
     public synchronized void stop()
     {
+        if(tlisten == null) return;
+
         tlisten.terminate();
         try
         {
             tlisten.join();
         }
         catch(Exception e) {}
-        //tlisten = null;
+        this.stopped(null);
+        tlisten = null;
     }
 
 
@@ -260,7 +265,6 @@ public class Skeleton<T>
             }
             catch(Exception e) {}
 
-            father.stopped(null);
         }
 
         public void run()
@@ -294,6 +298,7 @@ public class Skeleton<T>
             {
                 try
                 {
+                    s.terminate();
                     s.join();
                 }
                 catch (InterruptedException e)
@@ -308,15 +313,58 @@ public class Skeleton<T>
     private class SocketConn extends Thread
     {
         private Socket socket;
+        private volatile boolean stop = false;
 
         public SocketConn(Socket socket)
         {
             this.socket=socket;
         }
 
+        public void terminate()
+        {
+            stop = true;
+            try
+            {
+                socket.close();
+            }
+            catch(Exception e) {}
+
+        }
+
         public void run()
         {
+            ObjectInputStream ois = null;
+            ObjectOutputStream oos = null;
+            String mname = null;
+            Integer npara = null;
 
+            while(!stop)
+            {
+                try
+                {
+                    while (socket.getInputStream().available() <= 0)
+                        sleep(1);
+
+                    ois = new ObjectInputStream(socket.getInputStream());
+                    oos = new ObjectOutputStream(socket.getOutputStream());
+                    oos.flush();
+                    oos.writeChar(0);
+
+                    ois.readChar();
+                    mname = (String) ois.readObject();
+                    npara = (Integer) ois.readObject();
+
+                    List<Object> plist = new ArrayList<Object>();
+
+                    for (int i = 0; i < npara; i++)
+                        plist.add(ois.readObject());
+
+                    Object[] method = plist.toArray();
+
+
+                }
+                catch (Exception e) {}
+            }
         }
     }
 

@@ -265,12 +265,13 @@ public class Skeleton<T>
 
         public void run()
         {
+            Socket conn = null;
+
             while(!stop)
             {
-
                 try
                 {
-                    Socket conn = socket.accept();
+                    conn = socket.accept();
                 }
                 catch(SocketException e) {}
                 catch(Exception e)
@@ -280,10 +281,23 @@ public class Skeleton<T>
                     father.stopped(e);
                 }
 
-
-
+                if(conn != null)
+                    tsockets.add(new SocketConn(conn));
 
             }
+
+            for(SocketConn s : tsockets)
+            {
+                try
+                {
+                    s.join();
+                }
+                catch (InterruptedException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+
         }
     }
 

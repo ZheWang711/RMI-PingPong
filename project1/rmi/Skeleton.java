@@ -39,6 +39,8 @@ public class Skeleton<T>
     private ServerSocket socket = null;
     private SocketAddress address = null;
     private TCPListen tlisten = null;
+    private Class<T> c = null;
+    private T server = null;
 
 
     /** Creates a <code>Skeleton</code> with no initial server address. The
@@ -86,6 +88,9 @@ public class Skeleton<T>
     public Skeleton(Class<T> c, T server, InetSocketAddress address)
             throws NullPointerException, Error
     {
+        this.c = c;
+        this.server = server;
+
         if(c == null || server == null)
         {
             throw new NullPointerException("The template class or instance" +
@@ -242,6 +247,11 @@ public class Skeleton<T>
         tlisten = null;
     }
 
+    public synchronized Object Run(String mname, Integer npara, Object[] args)
+    {
+
+    }
+
 
     private class TCPListen extends Thread
     {
@@ -287,7 +297,7 @@ public class Skeleton<T>
 
                 if(conn != null)
                 {
-                    SocketConn tmp = new SocketConn(conn);
+                    SocketConn tmp = new SocketConn(conn, this.father);
                     tsockets.add(tmp);
                     tmp.start();
                 }
@@ -314,10 +324,12 @@ public class Skeleton<T>
     {
         private Socket socket;
         private volatile boolean stop = false;
+        private Skeleton<T> gfather = null;
 
-        public SocketConn(Socket socket)
+        public SocketConn(Socket socket, Skeleton<T> gfather)
         {
             this.socket=socket;
+            this.gfather=gfather;
         }
 
         public void terminate()
@@ -348,9 +360,7 @@ public class Skeleton<T>
                     ois = new ObjectInputStream(socket.getInputStream());
                     oos = new ObjectOutputStream(socket.getOutputStream());
                     oos.flush();
-                    oos.writeChar(0);
 
-                    ois.readChar();
                     mname = (String) ois.readObject();
                     npara = (Integer) ois.readObject();
 
@@ -359,8 +369,9 @@ public class Skeleton<T>
                     for (int i = 0; i < npara; i++)
                         plist.add(ois.readObject());
 
-                    Object[] method = plist.toArray();
+                    Object[] args = plist.toArray();
 
+                    gfather.Run(mname, npara, args);
 
                 }
                 catch (Exception e) {}

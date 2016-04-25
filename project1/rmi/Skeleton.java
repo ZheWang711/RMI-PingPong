@@ -63,7 +63,7 @@ public class Skeleton<T>
     public Skeleton(Class<T> c, T server) throws NullPointerException, Error
     {
         // Just invoke the general constructor with a designated port
-        this(c,server,new InetSocketAddress(7000));
+        this(c,server,null);
     }
 
     /** Creates a <code>Skeleton</code> with the given initial server address.
@@ -138,7 +138,7 @@ public class Skeleton<T>
 
         // iterate over all interfaces of 'server'
         for(Class<?> cl : server.getClass().getInterfaces())
-            if(cl.getName() == c.getName())
+            if(cl == c)
             {
                 intf = true;
                 break;
@@ -223,6 +223,8 @@ public class Skeleton<T>
      */
     public synchronized void start() throws RMIException
     {
+        if(address == null)
+            address = new InetSocketAddress(7000);
         try
         {
             socket = new ServerSocket();
@@ -260,30 +262,31 @@ public class Skeleton<T>
      */
     public synchronized void stop()
     {
-        if(tlisten == null) return;
+        if(tlisten == null) return;  // able to stop multiple times
 
-        tlisten.terminate();
+        tlisten.terminate();         // let thread know it should stop
         try
         {
-            tlisten.join();
+            tlisten.join();          // wait for the thread to exit
         }
         catch(Exception e) {}
-        this.stopped(null);
-        tlisten = null;
+        this.stopped(null);          // perform required post actions
+
+        tlisten = null;  // release the thread resource immediately
     }
 
     public synchronized Object Run(String mname, Class<?>[] ptype, Object[] args)
             throws Exception
     {
         Method m;
-        Object retv;
+        Object retv;  // return value
 
         try
         {
             m = server.getClass().getMethod(mname, ptype);
             retv = m.invoke(server, args);
         }
-        catch(Exception e)
+        catch(Exception e)  // throw all invocation exceptions to the Stub
         {
             e.printStackTrace();
             throw e;
@@ -292,13 +295,17 @@ public class Skeleton<T>
         return retv;
     }
 
-
+    /** The top level TCP server thread for
+     *  listening the port and run the sub-threads for
+     *  each connection
+    */
     private class TCPListen extends Thread
     {
-        private ServerSocket serversocket;
-        private volatile boolean stop = false;
-        private Skeleton<T> father;
+        private ServerSocket serversocket;     // TCP server socket
+        private volatile boolean stop = false; // stop request
+        private Skeleton<T> father;            // the Skeleton
         private List<SocketConn> tsockets = new ArrayList<SocketConn>();
+        // all TCP connection threads
 
         public TCPListen(ServerSocket socket, Skeleton<T> father)
         {
@@ -308,10 +315,10 @@ public class Skeleton<T>
 
         public void terminate()
         {
-            stop = true;
+            stop = true;  // make the stop request
             try
             {
-                serversocket.close();
+                serversocket.close(); // close socket, interrupt the accept
             }
             catch(Exception e) {}
 
@@ -325,7 +332,7 @@ public class Skeleton<T>
             {
                 try
                 {
-                    conn = serversocket.accept();
+                    conn = serversocket.accept();  //wait for connection
                 }
                 catch(SocketException e)
                 {
@@ -334,19 +341,19 @@ public class Skeleton<T>
                 catch(Exception e)
                 {
                     e.printStackTrace();
-                    father.listen_error(e);
+                    father.listen_error(e);  //deal with listen error
                 }
 
-                if(conn != null)
+                if(conn != null)  // prevent the stop situation caused socket.close
                 {
-                    SocketConn tmp = new SocketConn(conn, this.father);
+                    SocketConn tmp = new SocketConn(conn, this.father); //dispatch
                     tsockets.add(tmp);
                     tmp.start();
                 }
 
             }
 
-            for(SocketConn s : tsockets)
+            for(SocketConn s : tsockets) // request and wait for all connections finish
             {
                 try
                 {
@@ -362,6 +369,9 @@ public class Skeleton<T>
         }
     }
 
+    /**
+     *
+     */
     private class SocketConn extends Thread
     {
         private Socket socket;

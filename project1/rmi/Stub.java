@@ -51,11 +51,11 @@ public abstract class Stub
      <code>RMIException</code>, or if an object implementing
      this interface cannot be dynamically created.
      */
-//    public static <T> T create(Class<T> c, Skeleton<T> skeleton)
-//            throws UnknownHostException
-//    {
-//        throw new UnsupportedOperationException("not implemented");
-//    }
+    public static <T> T create(Class<T> c, Skeleton<T> skeleton)
+            throws UnknownHostException
+    {
+       throw new UnsupportedOperationException("not implemented");
+    }
 
     /** Creates a stub, given a skeleton with an assigned address and a hostname
      which overrides the skeleton's hostname.
@@ -87,11 +87,11 @@ public abstract class Stub
      <code>RMIException</code>, or if an object implementing
      this interface cannot be dynamically created.
      */
-//    public static <T> T create(Class<T> c, Skeleton<T> skeleton,
-//                               String hostname)
-//    {
-//        throw new UnsupportedOperationException("not implemented");
-//    }
+    public static <T> T create(Class<T> c, Skeleton<T> skeleton,
+                               String hostname)
+    {
+        throw new UnsupportedOperationException("not implemented");
+    }
 
     /** Creates a stub, given the address of a remote server.
 
@@ -112,8 +112,8 @@ public abstract class Stub
      */
     public static <T> T create(Class<T> c, InetSocketAddress address)
     {
-        T proxy = (T) Proxy.newProxyInstance(c.getClassLoader(), new Class[] {c}, new MyHandler(address) );
-        return proxy;
-        //throw new UnsupportedOperationException("not implemented");
+        //T proxy = (T) Proxy.newProxyInstance(c.getClassLoader(), new Class[] {c}, new MyHandler(address) );
+        //return proxy;
+        throw new UnsupportedOperationException("not implemented");
     }
 }

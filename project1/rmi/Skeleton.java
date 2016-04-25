@@ -416,12 +416,7 @@ public class Skeleton<T>
                 oos.flush();
 
                 while (socket.getInputStream().available() <= 0)
-                {
-                    if(stop) return;
                     sleep(1);
-                }
-
-                if(stop) return;
 
                 ois = new ObjectInputStream(socket.getInputStream());
 

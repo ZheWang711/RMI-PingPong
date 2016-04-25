@@ -35,13 +35,11 @@ import java.util.List;
  */
 public class Skeleton<T>
 {
-
     private ServerSocket socket = null;
     private SocketAddress address = null;
     private TCPListen tlisten = null;
     private Class<T> c = null;
     private T server = null;
-
 
     /** Creates a <code>Skeleton</code> with no initial server address. The
      address will be determined by the system when <code>start</code> is
@@ -64,6 +62,7 @@ public class Skeleton<T>
      */
     public Skeleton(Class<T> c, T server) throws NullPointerException, Error
     {
+        // Just invoke the general constructor with a designated port
         this(c,server,new InetSocketAddress(7000));
     }
 
@@ -88,10 +87,12 @@ public class Skeleton<T>
     public Skeleton(Class<T> c, T server, InetSocketAddress address)
             throws NullPointerException, Error
     {
-        this.c = c;
+        this.c = c;                      // record the interface and class instance
         this.server = server;
+        this.address = address;          // record the server address
 
-        if(c == null || server == null)
+
+        if(c == null || server == null)  // if either of the parameters are null
         {
             throw new NullPointerException("The template class or instance" +
                     "for creating the Skeleton is NULL.");
@@ -101,13 +102,14 @@ public class Skeleton<T>
         {
             boolean rmiexp;
 
-            if(!c.isInterface())
+            if(!c.isInterface())   // if c is not an interface
                 throw new Error("The template is not an interface.");
 
-            for(Method s : c.getMethods())
+            for(Method s : c.getMethods())  //iterate over all methods in c
             {
                 rmiexp = false;
 
+                // check if there is an RMIException
                 for(Class<?> exp : s.getExceptionTypes())
                     if(exp.getCanonicalName().equals("rmi.RMIException"))
                     {
@@ -115,7 +117,7 @@ public class Skeleton<T>
                         break;
                     }
 
-                if(!rmiexp)
+                if(!rmiexp)  //if no RMIException is found
                     throw new Error("The Methods in template class don't throw RMIException.");
 
             }
@@ -126,12 +128,18 @@ public class Skeleton<T>
             e.printStackTrace();
         }
 
-        this.address = address;
-
         /*
         TODO: Check in constructors of Skeleton and Stub
         whether the object passed in actually implemented the interface.
         */
+        boolean intf = false;
+        // iterate over all interfaces of server
+        for(Class<?> cl : server.getClass().getInterfaces())
+            if(cl.getName() == c.getName())
+            {
+                intf = true;
+                break;
+            }
 
     }
 

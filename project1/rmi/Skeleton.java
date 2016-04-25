@@ -266,17 +266,20 @@ public class Skeleton<T>
         if(tlisten == null) return;  // able to stop multiple times
 
         tlisten.terminate();         // let thread know it should stop
+
         try
         {
             tlisten.join();          // wait for the thread to exit
         }
         catch(Exception e) {}
+
         this.stopped(null);          // perform required post actions
+
 
         tlisten = null;  // release the thread resource immediately
     }
 
-    public synchronized Object Run(String mname, Class<?>[] ptype, Object[] args)
+    public Object Run(String mname, Class<?>[] ptype, Object[] args)
             throws Exception
     {
         Method m;
@@ -306,7 +309,7 @@ public class Skeleton<T>
     */
     private class TCPListen extends Thread
     {
-        private ServerSocket serversocket;     // TCP server socket
+        private volatile ServerSocket serversocket;     // TCP server socket
         private volatile boolean stop = false; // stop request
         private Skeleton<T> father;            // the Skeleton
         private List<SocketConn> tsockets = new ArrayList<SocketConn>();
@@ -341,7 +344,7 @@ public class Skeleton<T>
                 }
                 catch(SocketException e)
                 {
-                    if(stop) return;
+                    if(stop) break;
                 }
                 catch(Exception e)
                 {
@@ -378,7 +381,7 @@ public class Skeleton<T>
      */
     private class SocketConn extends Thread
     {
-        private Socket socket;
+        private volatile Socket socket;
         private volatile boolean stop = false;
         private Skeleton<T> gfather = null;
 
@@ -413,7 +416,10 @@ public class Skeleton<T>
                 oos.flush();
 
                 while (socket.getInputStream().available() <= 0)
+                {
+                    if(stop) return;
                     sleep(1);
+                }
 
                 if(stop) return;
 

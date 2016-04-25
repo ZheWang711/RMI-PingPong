@@ -36,7 +36,7 @@ import java.util.List;
 public class Skeleton<T>
 {
     private ServerSocket socket = null;
-    private SocketAddress address = null;
+    private InetSocketAddress address = null;
     private TCPListen tlisten = null;
     private Class<T> c = null;
     private T server = null;
@@ -105,11 +105,12 @@ public class Skeleton<T>
             if(!c.isInterface())   // if c is not an interface
                 throw new Error("The template is not an interface.");
 
-            for(Method s : c.getMethods())  //iterate over all methods in c
+            //iterate over all methods in c to check for RMIException
+            for(Method s : c.getMethods())
             {
                 rmiexp = false;
 
-                // check if there is an RMIException
+                // check if there is an RMIException in this method
                 for(Class<?> exp : s.getExceptionTypes())
                     if(exp.getCanonicalName().equals("rmi.RMIException"))
                     {
@@ -128,19 +129,30 @@ public class Skeleton<T>
             e.printStackTrace();
         }
 
+
         /*
-        TODO: Check in constructors of Skeleton and Stub
+        Check in constructors of Skeleton and Stub
         whether the object passed in actually implemented the interface.
         */
         boolean intf = false;
-        // iterate over all interfaces of server
+
+        // iterate over all interfaces of 'server'
         for(Class<?> cl : server.getClass().getInterfaces())
             if(cl.getName() == c.getName())
             {
                 intf = true;
                 break;
             }
+        if(!intf)
+            throw new Error("The interface c cannot match with server.");
 
+    }
+
+    /** Get the socket address from the Skeleton.
+     */
+    public InetSocketAddress getAddress()
+    {
+        return address;
     }
 
     /** Called when the listening thread exits.
@@ -323,7 +335,6 @@ public class Skeleton<T>
                 {
                     e.printStackTrace();
                     father.listen_error(e);
-                    father.stopped(e);
                 }
 
                 if(conn != null)

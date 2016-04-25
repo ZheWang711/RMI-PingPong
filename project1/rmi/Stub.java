@@ -4,6 +4,8 @@ package rmi;
  * Created by zhewang711 on 4/23/16.
  */
 
+import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.*;
 
 import java.lang.reflect.Proxy;
@@ -51,11 +53,52 @@ public abstract class Stub
      <code>RMIException</code>, or if an object implementing
      this interface cannot be dynamically created.
      */
-//    public static <T> T create(Class<T> c, Skeleton<T> skeleton)
-//            throws UnknownHostException
-//    {
-//        throw new UnsupportedOperationException("not implemented");
-//    }
+    public static <T> T create(Class<T> c, Skeleton<T> skeleton)
+            throws UnknownHostException
+    {
+        boolean rmiexp;
+
+        if(c == null || skeleton == null)  // if either of the parameters are null
+        {
+            throw new NullPointerException("The template class or instance" +
+                    "for creating the Skeleton is NULL.");
+        }
+        try {
+            if(!c.isInterface())   // if c is not an interface
+                throw new Error("The template is not an interface.");
+            //iterate over all methods in c to check for RMIException
+            for(Method s : c.getMethods()) {
+                rmiexp = false;
+                // check if there is an RMIException in this method
+                for(Class<?> exp : s.getExceptionTypes()) {
+                    if (exp.getCanonicalName().equals("rmi.RMIException")) {
+                        rmiexp = true;
+                        break;
+                    }
+                }
+                if(!rmiexp){
+                    //if no RMIException is found
+                    throw new Error("The Methods in template class don't throw RMIException.");
+                }
+
+            }
+        }
+        catch(SecurityException e) {
+            System.out.println("Get Methods is blocked by security reasons.");
+            e.printStackTrace();
+        }
+
+
+        if (skeleton.getAddress() == null){
+            throw new IllegalStateException("server address is null");
+        }
+
+
+//        if (skeleton.getAddress().getHostString() == "0.0.0.0"){
+//            throw new IllegalStateException("server not started");
+//        }
+        return create(c, skeleton.getAddress());
+    }
 
     /** Creates a stub, given a skeleton with an assigned address and a hostname
      which overrides the skeleton's hostname.
@@ -87,11 +130,51 @@ public abstract class Stub
      <code>RMIException</code>, or if an object implementing
      this interface cannot be dynamically created.
      */
-//    public static <T> T create(Class<T> c, Skeleton<T> skeleton,
-//                               String hostname)
-//    {
-//        throw new UnsupportedOperationException("not implemented");
-//    }
+    public static <T> T create(Class<T> c, Skeleton<T> skeleton,
+                               String hostname)
+    {
+        if(!c.isInterface())   // if c is not an interface
+            throw new Error("The template is not an interface.");
+
+
+        boolean rmiexp;
+
+        if(c == null || skeleton == null || hostname == null)  // if either of the parameters are null
+        {
+            throw new NullPointerException("The template class or instance" +
+                    "for creating the Skeleton is NULL.");
+        }
+        try {
+            if(!c.isInterface())   // if c is not an interface
+                throw new Error("The template is not an interface.");
+            //iterate over all methods in c to check for RMIException
+            for(Method s : c.getMethods()) {
+                rmiexp = false;
+                // check if there is an RMIException in this method
+                for(Class<?> exp : s.getExceptionTypes()) {
+                    if (exp.getCanonicalName().equals("rmi.RMIException")) {
+                        rmiexp = true;
+                        break;
+                    }
+                }
+                if(!rmiexp){
+                    //if no RMIException is found
+                    throw new Error("The Methods in template class don't throw RMIException.");
+                }
+
+            }
+        }
+        catch(SecurityException e) {
+            System.out.println("Get Methods is blocked by security reasons.");
+            e.printStackTrace();
+        }
+
+        if (skeleton.getAddress() == null){
+            throw new IllegalStateException("server address is null");
+        }
+
+        return create(c, new InetSocketAddress(hostname, skeleton.getAddress().getPort()));
+    }
 
     /** Creates a stub, given the address of a remote server.
 
@@ -112,8 +195,43 @@ public abstract class Stub
      */
     public static <T> T create(Class<T> c, InetSocketAddress address)
     {
-        T proxy = (T) Proxy.newProxyInstance(c.getClassLoader(), new Class[] {c}, new MyHandler(address) );
+        if(!c.isInterface())   // if c is not an interface
+            throw new Error("The template is not an interface.");
+
+        boolean rmiexp;
+
+        if(c == null || address == null)  // if either of the parameters are null
+        {
+            throw new NullPointerException("The template class or instance" +
+                    "for creating the Skeleton is NULL.");
+        }
+        try {
+            if(!c.isInterface())   // if c is not an interface
+                throw new Error("The template is not an interface.");
+            //iterate over all methods in c to check for RMIException
+            for(Method s : c.getMethods()) {
+                rmiexp = false;
+                // check if there is an RMIException in this method
+                for(Class<?> exp : s.getExceptionTypes()) {
+                    if (exp.getCanonicalName().equals("rmi.RMIException")) {
+                        rmiexp = true;
+                        break;
+                    }
+                }
+                if(!rmiexp){
+                    //if no RMIException is found
+                    throw new Error("The Methods in template class don't throw RMIException.");
+                }
+
+            }
+        }
+        catch(SecurityException e) {
+            System.out.println("Get Methods is blocked by security reasons.");
+            e.printStackTrace();
+        }
+
+        T proxy = (T) Proxy.newProxyInstance(c.getClassLoader(), new Class[] {c}, new MyHandler(address, c) );
+
         return proxy;
-        //throw new UnsupportedOperationException("not implemented");
     }
 }

@@ -279,29 +279,6 @@ public class Skeleton<T>
         tlisten = null;  // release the thread resource immediately
     }
 
-    public Object Run(String mname, Class<?>[] ptype, Object[] args)
-            throws Exception
-    {
-        Method m;
-        Object retv = null;  // return value
-
-        try
-        {
-            m = server.getClass().getMethod(mname, ptype);
-            retv = m.invoke(server, args);
-        }
-        catch(InvocationTargetException e)
-        {
-            return e.getTargetException();
-        }
-        catch(Exception e)  // throw all invocation exceptions to the Stub
-        {
-            e.printStackTrace();
-            throw e;
-        }
-
-        return retv;
-    }
 
     /** The top level TCP server thread for
      *  listening the port and run the sub-threads for
@@ -432,7 +409,21 @@ public class Skeleton<T>
 
             try
             {
-                oos.writeObject(gfather.Run(mname, ptype, plist));
+                Method m;
+                Object retv = null;  // return value
+
+                try
+                {
+                    m = server.getClass().getMethod(mname, ptype);
+                    retv = m.invoke(server, plist);  // actual invocation
+                }
+                catch(InvocationTargetException e)
+                {
+                    retv = e.getTargetException(); // get the actual exception
+                }
+
+                oos.writeObject(retv);
+
             }
             catch(Exception e) // if the invocation throws exception
             {

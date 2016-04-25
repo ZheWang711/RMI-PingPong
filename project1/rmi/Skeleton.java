@@ -5,6 +5,7 @@ import com.sun.javaws.exceptions.InvalidArgumentException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.*;
 import java.nio.channels.IllegalBlockingModeException;
@@ -279,12 +280,16 @@ public class Skeleton<T>
             throws Exception
     {
         Method m;
-        Object retv;  // return value
+        Object retv = null;  // return value
 
         try
         {
             m = server.getClass().getMethod(mname, ptype);
             retv = m.invoke(server, args);
+        }
+        catch(InvocationTargetException e)
+        {
+            return e.getTargetException();
         }
         catch(Exception e)  // throw all invocation exceptions to the Stub
         {

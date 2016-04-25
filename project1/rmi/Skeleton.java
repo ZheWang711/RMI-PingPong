@@ -35,13 +35,11 @@ import java.util.List;
  */
 public class Skeleton<T>
 {
-
     private ServerSocket socket = null;
-    private SocketAddress address = null;
+    private InetSocketAddress address = null;
     private TCPListen tlisten = null;
     private Class<T> c = null;
     private T server = null;
-
 
     /** Creates a <code>Skeleton</code> with no initial server address. The
      address will be determined by the system when <code>start</code> is
@@ -64,7 +62,8 @@ public class Skeleton<T>
      */
     public Skeleton(Class<T> c, T server) throws NullPointerException, Error
     {
-        this(c,server,new InetSocketAddress(7000));
+        // Just invoke the general constructor with a designated port
+        this(c,server,null);
     }
 
     /** Creates a <code>Skeleton</code> with the given initial server address.
@@ -88,10 +87,12 @@ public class Skeleton<T>
     public Skeleton(Class<T> c, T server, InetSocketAddress address)
             throws NullPointerException, Error
     {
-        this.c = c;
+        this.c = c;                      // record the interface and class instance
         this.server = server;
+        this.address = address;          // record the server address
 
-        if(c == null || server == null)
+
+        if(c == null || server == null)  // if either of the parameters are null
         {
             throw new NullPointerException("The template class or instance" +
                     "for creating the Skeleton is NULL.");
@@ -101,13 +102,15 @@ public class Skeleton<T>
         {
             boolean rmiexp;
 
-            if(!c.isInterface())
+            if(!c.isInterface())   // if c is not an interface
                 throw new Error("The template is not an interface.");
 
+            //iterate over all methods in c to check for RMIException
             for(Method s : c.getMethods())
             {
                 rmiexp = false;
 
+                // check if there is an RMIException in this method
                 for(Class<?> exp : s.getExceptionTypes())
                     if(exp.getCanonicalName().equals("rmi.RMIException"))
                     {
@@ -115,7 +118,7 @@ public class Skeleton<T>
                         break;
                     }
 
-                if(!rmiexp)
+                if(!rmiexp)  //if no RMIException is found
                     throw new Error("The Methods in template class don't throw RMIException.");
 
             }
@@ -126,13 +129,30 @@ public class Skeleton<T>
             e.printStackTrace();
         }
 
-        this.address = address;
 
         /*
-        TODO: Check in constructors of Skeleton and Stub
+        Check in constructors of Skeleton and Stub
         whether the object passed in actually implemented the interface.
         */
+        boolean intf = false;
 
+        // iterate over all interfaces of 'server'
+        for(Class<?> cl : server.getClass().getInterfaces())
+            if(cl == c)
+            {
+                intf = true;
+                break;
+            }
+        if(!intf)
+            throw new Error("The interface c cannot match with server.");
+
+    }
+
+    /** Get the socket address from the Skeleton.
+     */
+    public InetSocketAddress getAddress()
+    {
+        return address;
     }
 
     /** Called when the listening thread exits.
@@ -203,6 +223,8 @@ public class Skeleton<T>
      */
     public synchronized void start() throws RMIException
     {
+        if(address == null)
+            address = new InetSocketAddress(7000);
         try
         {
             socket = new ServerSocket();
@@ -240,30 +262,31 @@ public class Skeleton<T>
      */
     public synchronized void stop()
     {
-        if(tlisten == null) return;
+        if(tlisten == null) return;  // able to stop multiple times
 
-        tlisten.terminate();
+        tlisten.terminate();         // let thread know it should stop
         try
         {
-            tlisten.join();
+            tlisten.join();          // wait for the thread to exit
         }
         catch(Exception e) {}
-        this.stopped(null);
-        tlisten = null;
+        this.stopped(null);          // perform required post actions
+
+        tlisten = null;  // release the thread resource immediately
     }
 
     public synchronized Object Run(String mname, Class<?>[] ptype, Object[] args)
             throws Exception
     {
         Method m;
-        Object retv;
+        Object retv;  // return value
 
         try
         {
             m = server.getClass().getMethod(mname, ptype);
             retv = m.invoke(server, args);
         }
-        catch(Exception e)
+        catch(Exception e)  // throw all invocation exceptions to the Stub
         {
             e.printStackTrace();
             throw e;
@@ -272,13 +295,17 @@ public class Skeleton<T>
         return retv;
     }
 
-
+    /** The top level TCP server thread for
+     *  listening the port and run the sub-threads for
+     *  each connection
+    */
     private class TCPListen extends Thread
     {
-        private ServerSocket serversocket;
-        private volatile boolean stop = false;
-        private Skeleton<T> father;
+        private ServerSocket serversocket;     // TCP server socket
+        private volatile boolean stop = false; // stop request
+        private Skeleton<T> father;            // the Skeleton
         private List<SocketConn> tsockets = new ArrayList<SocketConn>();
+        // all TCP connection threads
 
         public TCPListen(ServerSocket socket, Skeleton<T> father)
         {
@@ -288,10 +315,10 @@ public class Skeleton<T>
 
         public void terminate()
         {
-            stop = true;
+            stop = true;  // make the stop request
             try
             {
-                serversocket.close();
+                serversocket.close(); // close socket, interrupt the accept
             }
             catch(Exception e) {}
 
@@ -305,7 +332,7 @@ public class Skeleton<T>
             {
                 try
                 {
-                    conn = serversocket.accept();
+                    conn = serversocket.accept();  //wait for connection
                 }
                 catch(SocketException e)
                 {
@@ -314,20 +341,19 @@ public class Skeleton<T>
                 catch(Exception e)
                 {
                     e.printStackTrace();
-                    father.listen_error(e);
-                    father.stopped(e);
+                    father.listen_error(e);  //deal with listen error
                 }
 
-                if(conn != null)
+                if(conn != null)  // prevent the stop situation caused socket.close
                 {
-                    SocketConn tmp = new SocketConn(conn, this.father);
+                    SocketConn tmp = new SocketConn(conn, this.father); //dispatch
                     tsockets.add(tmp);
                     tmp.start();
                 }
 
             }
 
-            for(SocketConn s : tsockets)
+            for(SocketConn s : tsockets) // request and wait for all connections finish
             {
                 try
                 {
@@ -343,6 +369,8 @@ public class Skeleton<T>
         }
     }
 
+    /** The thread class for handling each Stub connection
+     */
     private class SocketConn extends Thread
     {
         private Socket socket;
@@ -391,7 +419,7 @@ public class Skeleton<T>
                 plist = (Object[])ois.readObject();
 
             }
-            catch (Exception e)
+            catch (Exception e) // the exception from stop request
             {
                 if(stop) return;
             }
@@ -400,11 +428,11 @@ public class Skeleton<T>
             {
                 oos.writeObject(gfather.Run(mname, ptype, plist));
             }
-            catch(Exception e)
+            catch(Exception e) // if the invocation throws exception
             {
                 try
                 {
-                    oos.writeObject(e);
+                    oos.writeObject(e); // send back the exception
                 }
                 catch(Exception ee) {}
             }

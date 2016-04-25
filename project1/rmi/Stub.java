@@ -95,21 +95,21 @@ public abstract class Stub
 
     /** Creates a stub, given the address of a remote server.
 
-     <p>
-     This method should be used primarily when bootstrapping RMI. In this
-     case, the server is already running on a remote host but there is
-     not necessarily a direct way to obtain an associated stub.
+ <p>
+ This method should be used primarily when bootstrapping RMI. In this
+ case, the server is already running on a remote host but there is
+ not necessarily a direct way to obtain an associated stub.
 
-     @param c A <code>Class</code> object representing the interface
-     implemented by the remote object.
-     @param address The network address of the remote skeleton.
-     @return The stub created.
-     @throws NullPointerException If any argument is <code>null</code>.
-     @throws Error If <code>c</code> does not represent a remote interface
-     - an interface in which each method is marked as throwing
-     <code>RMIException</code>, or if an object implementing
-     this interface cannot be dynamically created.
-     */
+ @param c A <code>Class</code> object representing the interface
+ implemented by the remote object.
+ @param address The network address of the remote skeleton.
+ @return The stub created.
+ @throws NullPointerException If any argument is <code>null</code>.
+ @throws Error If <code>c</code> does not represent a remote interface
+ - an interface in which each method is marked as throwing
+ <code>RMIException</code>, or if an object implementing
+ this interface cannot be dynamically created.
+ */
     public static <T> T create(Class<T> c, InetSocketAddress address)
     {
         //T proxy = (T) Proxy.newProxyInstance(c.getClassLoader(), new Class[] {c}, new MyHandler(address) );

@@ -369,8 +369,7 @@ public class Skeleton<T>
         }
     }
 
-    /**
-     *
+    /** The thread class for handling each Stub connection
      */
     private class SocketConn extends Thread
     {
@@ -420,7 +419,7 @@ public class Skeleton<T>
                 plist = (Object[])ois.readObject();
 
             }
-            catch (Exception e)
+            catch (Exception e) // the exception from stop request
             {
                 if(stop) return;
             }
@@ -429,11 +428,11 @@ public class Skeleton<T>
             {
                 oos.writeObject(gfather.Run(mname, ptype, plist));
             }
-            catch(Exception e)
+            catch(Exception e) // if the invocation throws exception
             {
                 try
                 {
-                    oos.writeObject(e);
+                    oos.writeObject(e); // send back the exception
                 }
                 catch(Exception ee) {}
             }

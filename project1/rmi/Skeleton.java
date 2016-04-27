@@ -1,13 +1,10 @@
 package rmi;
 
-import com.sun.javaws.exceptions.InvalidArgumentException;
-
-import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.*;
-import java.nio.channels.IllegalBlockingModeException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,11 +32,16 @@ import java.util.List;
  */
 public class Skeleton<T>
 {
-    private ServerSocket socket = null;
+    //private ServerSocket socket = null;
     private InetSocketAddress address = null;
+
+    // a main thread "accept" incoming connection, and spawn subthreads to call method in para@ server
     private TCPListen tlisten = null;
-    private Class<T> c = null;
+
+    // object implementing the common interface
     private T server = null;
+
+    private boolean started = false;
 
     /** Creates a <code>Skeleton</code> with no initial server address. The
      address will be determined by the system when <code>start</code> is
@@ -63,7 +65,7 @@ public class Skeleton<T>
     public Skeleton(Class<T> c, T server) throws NullPointerException, Error
     {
         // Just invoke the general constructor with a designated port
-        this(c,server,null);
+        this(c, server, null);
     }
 
     /** Creates a <code>Skeleton</code> with the given initial server address.
@@ -87,21 +89,21 @@ public class Skeleton<T>
     public Skeleton(Class<T> c, T server, InetSocketAddress address)
             throws NullPointerException, Error
     {
-        this.c = c;                      // record the interface and class instance
         this.server = server;
         this.address = address;          // record the server address
 
+        // ---- checking ---
 
-        if(c == null || server == null)  // if either of the parameters are null
-        {
+        // if either of the parameters is null
+        if(c == null || server == null) {
             throw new NullPointerException("The template class or instance" +
                     "for creating the Skeleton is NULL.");
         }
 
+        // checking if param@c is a remote interface
         try
         {
             boolean rmiexp;
-
             if(!c.isInterface())   // if c is not an interface
                 throw new Error("The template is not an interface.");
 
@@ -117,10 +119,8 @@ public class Skeleton<T>
                         rmiexp = true;
                         break;
                     }
-
                 if(!rmiexp)  //if no RMIException is found
                     throw new Error("The Methods in template class don't throw RMIException.");
-
             }
         }
         catch(SecurityException e)
@@ -130,21 +130,18 @@ public class Skeleton<T>
         }
 
 
-        /*
-        Check in constructors of Skeleton and Stub
-        whether the object passed in actually implemented the interface.
-        */
-        boolean intf = false;
-
-        // iterate over all interfaces of 'server'
-        for(Class<?> cl : server.getClass().getInterfaces())
-            if(cl == c)
-            {
-                intf = true;
-                break;
-            }
-        if(!intf)
-            throw new Error("The interface c cannot match with server.");
+        // checking whether the object passed in actually implemented the interface.
+        {
+            boolean intf = false;
+            // iterate over all interfaces of 'server'
+            for(Class<?> cl : server.getClass().getInterfaces())
+                if(cl == c) {
+                    intf = true;
+                    break;
+                }
+            if(!intf)
+                throw new Error("The interface c cannot match with server.");
+        }
 
     }
 
@@ -223,21 +220,22 @@ public class Skeleton<T>
      */
     public synchronized void start() throws RMIException
     {
+        ServerSocket socket = null;
+
+        if(started) return;
+        else started = true;
+
         if(address == null)
             address = new InetSocketAddress(7000);
-        try
-        {
+        try {
             socket = new ServerSocket();
         }
-        catch(Exception e)
-        {
+        catch(Exception e) {
             System.out.println("Skeleton TCP socket open error.");
             e.printStackTrace();
             throw new RMIException("Skeleton TCP socket open error.");
         }
-
-        try
-        {
+        try {
             socket.bind(address);
         }
         catch(Exception e)
@@ -245,7 +243,6 @@ public class Skeleton<T>
             e.printStackTrace();
             throw new RMIException("Skeleton TCP socket bind error.");
         }
-
         tlisten = new TCPListen(socket, this);
         tlisten.start();
 
@@ -262,38 +259,25 @@ public class Skeleton<T>
      */
     public synchronized void stop()
     {
+        if(!started) return;
+        else started = false;
+
         if(tlisten == null) return;  // able to stop multiple times
 
         tlisten.terminate();         // let thread know it should stop
+
         try
         {
             tlisten.join();          // wait for the thread to exit
         }
         catch(Exception e) {}
+
         this.stopped(null);          // perform required post actions
+
 
         tlisten = null;  // release the thread resource immediately
     }
 
-    public synchronized Object Run(String mname, Class<?>[] ptype, Object[] args)
-            throws Exception
-    {
-        Method m;
-        Object retv;  // return value
-
-        try
-        {
-            m = server.getClass().getMethod(mname, ptype);
-            retv = m.invoke(server, args);
-        }
-        catch(Exception e)  // throw all invocation exceptions to the Stub
-        {
-            e.printStackTrace();
-            throw e;
-        }
-
-        return retv;
-    }
 
     /** The top level TCP server thread for
      *  listening the port and run the sub-threads for
@@ -301,19 +285,19 @@ public class Skeleton<T>
     */
     private class TCPListen extends Thread
     {
-        private ServerSocket serversocket;     // TCP server socket
+        private volatile ServerSocket serversocket;     // TCP server socket
         private volatile boolean stop = false; // stop request
         private Skeleton<T> father;            // the Skeleton
         private List<SocketConn> tsockets = new ArrayList<SocketConn>();
-        // all TCP connection threads
+        // all TCP connection thread lists, for joins when stop
 
-        public TCPListen(ServerSocket socket, Skeleton<T> father)
+        private TCPListen(ServerSocket socket, Skeleton<T> father)
         {
             this.serversocket = socket;
             this.father = father;
         }
 
-        public void terminate()
+        private void terminate()
         {
             stop = true;  // make the stop request
             try
@@ -336,7 +320,7 @@ public class Skeleton<T>
                 }
                 catch(SocketException e)
                 {
-                    if(stop) return;
+                    if(stop) break;
                 }
                 catch(Exception e)
                 {
@@ -346,7 +330,7 @@ public class Skeleton<T>
 
                 if(conn != null)  // prevent the stop situation caused socket.close
                 {
-                    SocketConn tmp = new SocketConn(conn, this.father); //dispatch
+                    SocketConn tmp = new SocketConn(conn); //dispatch
                     tsockets.add(tmp);
                     tmp.start();
                 }
@@ -373,17 +357,15 @@ public class Skeleton<T>
      */
     private class SocketConn extends Thread
     {
-        private Socket socket;
-        private volatile boolean stop = false;
-        private Skeleton<T> gfather = null;
+        private volatile Socket socket;
+        private volatile boolean stop = false; //stop signal
 
-        public SocketConn(Socket socket, Skeleton<T> gfather)
+        private SocketConn(Socket socket)
         {
             this.socket=socket;
-            this.gfather=gfather;
         }
 
-        public void terminate()
+        private void terminate()
         {
             stop = true;
             try
@@ -410,8 +392,6 @@ public class Skeleton<T>
                 while (socket.getInputStream().available() <= 0)
                     sleep(1);
 
-                if(stop) return;
-
                 ois = new ObjectInputStream(socket.getInputStream());
 
                 mname = (String) ois.readObject();
@@ -426,7 +406,21 @@ public class Skeleton<T>
 
             try
             {
-                oos.writeObject(gfather.Run(mname, ptype, plist));
+                Method m;
+                Object retv = null;  // return value
+
+                try
+                {
+                    m = server.getClass().getMethod(mname, ptype);
+                    retv = m.invoke(server, plist);  // actual invocation
+                }
+                catch(InvocationTargetException e)
+                {
+                    retv = e.getTargetException(); // get the actual exception
+                }
+
+                oos.writeObject(retv);
+
             }
             catch(Exception e) // if the invocation throws exception
             {

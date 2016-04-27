@@ -1,14 +1,10 @@
 package rmi;
 
-import com.sun.javaws.exceptions.InvalidArgumentException;
-
-import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.*;
-import java.nio.channels.IllegalBlockingModeException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,6 +37,7 @@ public class Skeleton<T>
     private TCPListen tlisten = null;
     private Class<T> c = null;
     private T server = null;
+    private boolean started = false;
 
     /** Creates a <code>Skeleton</code> with no initial server address. The
      address will be determined by the system when <code>start</code> is
@@ -218,6 +215,9 @@ public class Skeleton<T>
      */
     public synchronized void start() throws RMIException
     {
+        if(started) return;
+        else started = true;
+
         if(address == null)
             address = new InetSocketAddress(7000);
         try {
@@ -252,6 +252,9 @@ public class Skeleton<T>
      */
     public synchronized void stop()
     {
+        if(!started) return;
+        else started = false;
+
         if(tlisten == null) return;  // able to stop multiple times
 
         tlisten.terminate();         // let thread know it should stop
@@ -268,29 +271,6 @@ public class Skeleton<T>
         tlisten = null;  // release the thread resource immediately
     }
 
-    public Object Run(String mname, Class<?>[] ptype, Object[] args)
-            throws Exception
-    {
-        Method m;
-        Object retv = null;  // return value
-
-        try
-        {
-            m = server.getClass().getMethod(mname, ptype);
-            retv = m.invoke(server, args);
-        }
-        catch(InvocationTargetException e)
-        {
-            return e.getTargetException();
-        }
-        catch(Exception e)  // throw all invocation exceptions to the Stub
-        {
-            e.printStackTrace();
-            throw e;
-        }
-
-        return retv;
-    }
 
     /** The top level TCP server thread for
      *  listening the port and run the sub-threads for
@@ -406,12 +386,7 @@ public class Skeleton<T>
                 oos.flush();
 
                 while (socket.getInputStream().available() <= 0)
-                {
-                    if(stop) return;
                     sleep(1);
-                }
-
-                if(stop) return;
 
                 ois = new ObjectInputStream(socket.getInputStream());
 
@@ -427,7 +402,21 @@ public class Skeleton<T>
 
             try
             {
-                oos.writeObject(gfather.Run(mname, ptype, plist));
+                Method m;
+                Object retv = null;  // return value
+
+                try
+                {
+                    m = server.getClass().getMethod(mname, ptype);
+                    retv = m.invoke(server, plist);  // actual invocation
+                }
+                catch(InvocationTargetException e)
+                {
+                    retv = e.getTargetException(); // get the actual exception
+                }
+
+                oos.writeObject(retv);
+
             }
             catch(Exception e) // if the invocation throws exception
             {

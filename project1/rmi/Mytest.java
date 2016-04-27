@@ -8,7 +8,9 @@ import java.net.InetSocketAddress;
 public class Mytest {
 
     public static void main(String [] args){
-        testVoid();
+        startServer();
+
+        testNull();
         testVoid();
     }
 
@@ -37,7 +39,6 @@ public class Mytest {
 
     private static void testNull(){
 
-        startServer();
         TestInterface s = startStub();
 
         try{
@@ -50,7 +51,6 @@ public class Mytest {
     }
 
     private static void testVoid(){
-        startServer();
         TestInterface s = startStub();
         try{
             s.echo();

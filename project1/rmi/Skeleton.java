@@ -34,9 +34,13 @@ public class Skeleton<T>
 {
     private ServerSocket socket = null;
     private InetSocketAddress address = null;
+
+    // a main thread "accept" incoming connection, and spawn subthreads to call method in para@ server
     private TCPListen tlisten = null;
-    private Class<T> c = null;
+
+    // object implementing the common interface
     private T server = null;
+
     private boolean started = false;
 
     /** Creates a <code>Skeleton</code> with no initial server address. The
@@ -85,15 +89,18 @@ public class Skeleton<T>
     public Skeleton(Class<T> c, T server, InetSocketAddress address)
             throws NullPointerException, Error
     {
-        this.c = c;                      // record the interface and class instance
         this.server = server;
         this.address = address;          // record the server address
 
-        if(c == null || server == null)  // if either of the parameters are null
-        {
+        // ---- checking ---
+
+        // if either of the parameters is null
+        if(c == null || server == null) {
             throw new NullPointerException("The template class or instance" +
                     "for creating the Skeleton is NULL.");
         }
+
+        // checking if param@c is a remote interface
         try
         {
             boolean rmiexp;
@@ -122,21 +129,19 @@ public class Skeleton<T>
             e.printStackTrace();
         }
 
-        /*
-        Check in constructors of Skeleton and Stub
-        whether the object passed in actually implemented the interface.
-        */
-        boolean intf = false;
 
-        // iterate over all interfaces of 'server'
-        for(Class<?> cl : server.getClass().getInterfaces())
-            if(cl == c)
-            {
-                intf = true;
-                break;
-            }
-        if(!intf)
-            throw new Error("The interface c cannot match with server.");
+        // checking whether the object passed in actually implemented the interface.
+        {
+            boolean intf = false;
+            // iterate over all interfaces of 'server'
+            for(Class<?> cl : server.getClass().getInterfaces())
+                if(cl == c) {
+                    intf = true;
+                    break;
+                }
+            if(!intf)
+                throw new Error("The interface c cannot match with server.");
+        }
 
     }
 

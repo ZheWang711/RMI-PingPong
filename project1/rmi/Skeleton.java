@@ -1,14 +1,10 @@
 package rmi;
 
-import com.sun.javaws.exceptions.InvalidArgumentException;
-
-import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.*;
-import java.nio.channels.IllegalBlockingModeException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,6 +37,7 @@ public class Skeleton<T>
     private TCPListen tlisten = null;
     private Class<T> c = null;
     private T server = null;
+    private boolean started = false;
 
     /** Creates a <code>Skeleton</code> with no initial server address. The
      address will be determined by the system when <code>start</code> is
@@ -224,6 +221,9 @@ public class Skeleton<T>
      */
     public synchronized void start() throws RMIException
     {
+        if(started) return;
+        else started = true;
+
         if(address == null)
             address = new InetSocketAddress(7000);
         try
@@ -263,6 +263,9 @@ public class Skeleton<T>
      */
     public synchronized void stop()
     {
+        if(!started) return;
+        else started = false;
+
         if(tlisten == null) return;  // able to stop multiple times
 
         tlisten.terminate();         // let thread know it should stop

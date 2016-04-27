@@ -32,7 +32,7 @@ import java.util.List;
  */
 public class Skeleton<T>
 {
-    private ServerSocket socket = null;
+    //private ServerSocket socket = null;
     private InetSocketAddress address = null;
 
     // a main thread "accept" incoming connection, and spawn subthreads to call method in para@ server
@@ -220,6 +220,8 @@ public class Skeleton<T>
      */
     public synchronized void start() throws RMIException
     {
+        ServerSocket socket = null;
+
         if(started) return;
         else started = true;
 
@@ -287,16 +289,15 @@ public class Skeleton<T>
         private volatile boolean stop = false; // stop request
         private Skeleton<T> father;            // the Skeleton
         private List<SocketConn> tsockets = new ArrayList<SocketConn>();
-        // all TCP connection threads
-        private Object mutex = new Object();
+        // all TCP connection thread lists, for joins when stop
 
-        public TCPListen(ServerSocket socket, Skeleton<T> father)
+        private TCPListen(ServerSocket socket, Skeleton<T> father)
         {
             this.serversocket = socket;
             this.father = father;
         }
 
-        public void terminate()
+        private void terminate()
         {
             stop = true;  // make the stop request
             try
@@ -307,7 +308,7 @@ public class Skeleton<T>
 
         }
 
-        public synchronized void run()
+        public void run()
         {
             Socket conn = null;
 
@@ -329,7 +330,7 @@ public class Skeleton<T>
 
                 if(conn != null)  // prevent the stop situation caused socket.close
                 {
-                    SocketConn tmp = new SocketConn(conn, this.father); //dispatch
+                    SocketConn tmp = new SocketConn(conn); //dispatch
                     tsockets.add(tmp);
                     tmp.start();
                 }
@@ -357,16 +358,14 @@ public class Skeleton<T>
     private class SocketConn extends Thread
     {
         private volatile Socket socket;
-        private volatile boolean stop = false;
-        private Skeleton<T> gfather = null;
+        private volatile boolean stop = false; //stop signal
 
-        public SocketConn(Socket socket, Skeleton<T> gfather)
+        private SocketConn(Socket socket)
         {
             this.socket=socket;
-            this.gfather=gfather;
         }
 
-        public void terminate()
+        private void terminate()
         {
             stop = true;
             try

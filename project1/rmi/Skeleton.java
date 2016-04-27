@@ -64,7 +64,7 @@ public class Skeleton<T>
     public Skeleton(Class<T> c, T server) throws NullPointerException, Error
     {
         // Just invoke the general constructor with a designated port
-        this(c,server,null);
+        this(c, server, null);
     }
 
     /** Creates a <code>Skeleton</code> with the given initial server address.
@@ -92,17 +92,14 @@ public class Skeleton<T>
         this.server = server;
         this.address = address;          // record the server address
 
-
         if(c == null || server == null)  // if either of the parameters are null
         {
             throw new NullPointerException("The template class or instance" +
                     "for creating the Skeleton is NULL.");
         }
-
         try
         {
             boolean rmiexp;
-
             if(!c.isInterface())   // if c is not an interface
                 throw new Error("The template is not an interface.");
 
@@ -118,10 +115,8 @@ public class Skeleton<T>
                         rmiexp = true;
                         break;
                     }
-
                 if(!rmiexp)  //if no RMIException is found
                     throw new Error("The Methods in template class don't throw RMIException.");
-
             }
         }
         catch(SecurityException e)
@@ -129,7 +124,6 @@ public class Skeleton<T>
             System.out.println("Get Methods is blocked by security reasons.");
             e.printStackTrace();
         }
-
 
         /*
         Check in constructors of Skeleton and Stub
@@ -226,19 +220,15 @@ public class Skeleton<T>
     {
         if(address == null)
             address = new InetSocketAddress(7000);
-        try
-        {
+        try {
             socket = new ServerSocket();
         }
-        catch(Exception e)
-        {
+        catch(Exception e) {
             System.out.println("Skeleton TCP socket open error.");
             e.printStackTrace();
             throw new RMIException("Skeleton TCP socket open error.");
         }
-
-        try
-        {
+        try {
             socket.bind(address);
         }
         catch(Exception e)
@@ -246,7 +236,6 @@ public class Skeleton<T>
             e.printStackTrace();
             throw new RMIException("Skeleton TCP socket bind error.");
         }
-
         tlisten = new TCPListen(socket, this);
         tlisten.start();
 
@@ -314,6 +303,7 @@ public class Skeleton<T>
         private Skeleton<T> father;            // the Skeleton
         private List<SocketConn> tsockets = new ArrayList<SocketConn>();
         // all TCP connection threads
+        private Object mutex = new Object();
 
         public TCPListen(ServerSocket socket, Skeleton<T> father)
         {
@@ -332,7 +322,7 @@ public class Skeleton<T>
 
         }
 
-        public void run()
+        public synchronized void run()
         {
             Socket conn = null;
 

@@ -7,16 +7,21 @@ import java.net.InetSocketAddress;
 /**
  * Created by zhewang711 on 4/27/16.
  */
-public class PingPongTest {
+public class StartServerNFactory {
 
     Skeleton<PingServerFactory> factorySkeleton = null;
 
     public static void main(String [] args) {
-        Skeleton<PingServer> serverSkeleton = startServerSkeleton();
-        Skeleton<PingServerFactory> factorySkeleton = startFact();
+        //Skeleton<PingServer> serverSkeleton = startServerSkeleton();
+        // Skeleton<PingServerFactory> factorySkeleton = startFact();
 
-        while (true){
-        }
+        //startServerSkeleton();
+        startFact();
+
+        /*while (true){
+        }*/
+
+
     }
 
     private static Skeleton<PingServer> startServerSkeleton(){

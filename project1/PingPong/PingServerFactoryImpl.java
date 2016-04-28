@@ -1,4 +1,6 @@
-package rmi;
+package PingPong;
+
+import rmi.*;
 
 import java.net.UnknownHostException;
 

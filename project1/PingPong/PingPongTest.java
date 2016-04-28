@@ -1,4 +1,8 @@
-package rmi;
+package PingPong;
+
+import rmi.*;
+
+import java.net.InetSocketAddress;
 
 /**
  * Created by zhewang711 on 4/27/16.
@@ -29,7 +33,7 @@ public class PingPongTest {
 
     private static Skeleton<PingServerFactory> startFact(){
         PingServerFactoryImpl factory = new PingServerFactoryImpl(startServerSkeleton());
-        Skeleton<PingServerFactory> factorySkeleton = new Skeleton(PingServerFactory.class, factory);
+        Skeleton<PingServerFactory> factorySkeleton = new Skeleton(PingServerFactory.class, factory, new InetSocketAddress("localhost", 7000));
         try{
             factorySkeleton.start();
         }

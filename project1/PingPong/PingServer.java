@@ -1,4 +1,6 @@
-package rmi;
+package PingPong;
+
+import rmi.RMIException;
 
 /**
  * Created by zhewang711 on 4/27/16.

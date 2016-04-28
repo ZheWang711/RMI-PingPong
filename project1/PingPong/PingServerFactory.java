@@ -1,7 +1,6 @@
-package rmi;
+package PingPong;
 
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
+import rmi.RMIException;
 
 /**
  * Created by zhewang711 on 4/27/16.

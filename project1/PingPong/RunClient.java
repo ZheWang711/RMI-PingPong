@@ -1,4 +1,6 @@
-package rmi;
+package PingPong;
+
+
 
 /**
  * Created by zhewang711 on 4/27/16.

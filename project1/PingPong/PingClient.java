@@ -1,4 +1,7 @@
-package rmi;
+package PingPong;
+
+import rmi.RMIException;
+import rmi.Stub;
 
 import java.net.InetSocketAddress;
 

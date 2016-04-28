@@ -384,6 +384,7 @@ public class Skeleton<T>
             String mname = null;
             Object[] plist = null;
             Class<?>[] ptype = null;
+            Object retv = null;  // return value
 
             try
             {
@@ -408,11 +409,11 @@ public class Skeleton<T>
             try
             {
                 Method m;
-                Object retv = null;  // return value
 
                 try
                 {
                     m = server.getClass().getMethod(mname, ptype);
+                    m.setAccessible(true);
                     retv = m.invoke(server, plist);  // actual invocation
                 }
                 catch(InvocationTargetException e)
@@ -429,7 +430,9 @@ public class Skeleton<T>
                 {
                     oos.writeObject(e); // send back the exception
                 }
-                catch(Exception ee) {}
+                catch(Exception ee) {
+                    ee.printStackTrace();
+                }
             }
 
             try

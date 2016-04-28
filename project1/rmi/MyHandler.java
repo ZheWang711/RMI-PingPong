@@ -10,7 +10,7 @@ import static java.lang.Thread.sleep;
 /**
  * Created by zhewang711 on 4/24/16.
  */
-public class MyHandler implements InvocationHandler{
+public class MyHandler implements InvocationHandler, Serializable{
     private Class<?> intfc;
     private InetSocketAddress address;
     private Socket socket;

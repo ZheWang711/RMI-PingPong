@@ -17,7 +17,7 @@ echo "----------run client &server containers----------"
 docker run --volumes-from dbvc1 -d --name=pingserver --net=lab1test zhe/lab1cs /data/runServer.sh
 docker run --volumes-from dbvc1 -d --name=pingclient --net=lab1test zhe/lab1cs /data/runClient.sh
 
-echo "----------client logs will be displayed in 2 seconds----------"
+echo "----------client logs will be displayed in 5 seconds----------"
 sleep 5
 docker logs pingclient
 

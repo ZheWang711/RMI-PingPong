@@ -225,8 +225,6 @@ public class Skeleton<T>
         if(started) return;
         else started = true;
 
-        if(address == null)
-            address = new InetSocketAddress(7000);
         try {
             socket = new ServerSocket();
         }
@@ -235,8 +233,12 @@ public class Skeleton<T>
             e.printStackTrace();
             throw new RMIException("Skeleton TCP socket open error.");
         }
-        try {
-            socket.bind(address);
+        try{
+            if(address == null) {  // if there is no address assigned
+                socket.bind(new InetSocketAddress(InetAddress.getLocalHost(), 0));
+                address = (InetSocketAddress) socket.getLocalSocketAddress();
+            }
+            else socket.bind(address);  // if the address is assigned
         }
         catch(Exception e)
         {
@@ -245,7 +247,6 @@ public class Skeleton<T>
         }
         tlisten = new TCPListen(socket, this);
         tlisten.start();
-
     }
 
     /** Stops the skeleton server, if it is already running.

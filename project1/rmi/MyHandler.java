@@ -29,18 +29,46 @@ public class MyHandler implements InvocationHandler, Serializable{
         ObjectOutputStream oos = null;
         ObjectInputStream ois = null;
 
-        if (method.getName() == "equals") { // equals method
+        // test if the equals/hash/tostr methods are overloaded
+        boolean overload_equal = true;
+        boolean overload_hash = true;
+        boolean overload_tostr = true;
+
+        try{
+            this.intfc.getMethod("equals", method.getParameterTypes());
+        }
+        catch (Exception e){
+            overload_equal = false;
+        }
+
+        try{
+            this.intfc.getMethod("hashCode", method.getParameterTypes());
+        }
+        catch (Exception e){
+            overload_hash = false;
+        }
+
+        try{
+            this.intfc.getMethod("hashCode", method.getParameterTypes());
+        }
+        catch (Exception e){
+            overload_tostr = false;
+        }
+
+
+
+        if (method.getName() == "equals" && !overload_equal) { // equals method
             if (args[0] == null) {
                 return false;
             }
             return (31 * this.address.hashCode() + 17 * this.intfc.hashCode()) == args[0].hashCode();
         }
 
-        else if (method.getName() == "hashCode") { // hashcode method
+        else if (method.getName() == "hashCode" && !overload_hash) { // hashcode method
             return 31 * this.address.hashCode() + 17 * this.intfc.hashCode();
         }
 
-        else if (method.getName() == "toString"){
+        else if (method.getName() == "toString" && !overload_tostr){
             return "interface name: " + this.intfc.getName() + ", remote address:" + this.address.toString();
         }
 

@@ -1,5 +1,6 @@
 package rmi;
 
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -235,7 +236,8 @@ public class Skeleton<T>
         }
         try{
             if(address == null) {  // if there is no address assigned
-                socket.bind(new InetSocketAddress(InetAddress.getLocalHost(), 0));
+                //socket.bind(new InetSocketAddress(InetAddress.getLocalHost(), 0));
+                socket.bind(new InetSocketAddress("0.0.0.0", 0));
                 address = (InetSocketAddress) socket.getLocalSocketAddress();
             }
             else socket.bind(address);  // if the address is assigned
@@ -305,7 +307,9 @@ public class Skeleton<T>
             {
                 serversocket.close(); // close socket, interrupt the accept
             }
-            catch(Exception e) {}
+            catch(Exception e) {
+                e.printStackTrace();
+            }
 
         }
 
@@ -326,7 +330,8 @@ public class Skeleton<T>
                 catch(Exception e)
                 {
                     e.printStackTrace();
-                    father.listen_error(e);  //deal with listen error
+                    //father.listen_error(e);  //deal with listen error
+                    if(stop) break;
                 }
 
                 if(conn != null)  // prevent the stop situation caused socket.close
@@ -338,11 +343,13 @@ public class Skeleton<T>
 
             }
 
+            for(SocketConn s : tsockets) // tell every thread it's time to stop
+                s.terminate();
+
             for(SocketConn s : tsockets) // request and wait for all connections finish
             {
                 try
                 {
-                    s.terminate();
                     s.join();
                 }
                 catch (InterruptedException e)
@@ -358,33 +365,34 @@ public class Skeleton<T>
      */
     private class SocketConn extends Thread
     {
-        private volatile Socket socket;
-        private volatile boolean stop = false; //stop signal
+        private Socket socket;
+        private volatile boolean readok = false;
+        private volatile boolean stopped = false;
+
 
         private SocketConn(Socket socket)
         {
             this.socket=socket;
         }
 
-        private void terminate()
+        public void terminate()
         {
-            stop = true;
-            try
-            {
-                socket.close();
+            stopped = true;  // mark the stop
+            try{
+                if(!readok) socket.close();  // not start reading when terminate, close the socket
+            }catch(Exception e){
+                e.printStackTrace();
             }
-            catch(Exception e) {}
-
         }
 
         public void run()
         {
             ObjectInputStream ois = null;
             ObjectOutputStream oos = null;
-            String mname = null;
-            Object[] plist = null;
-            Class<?>[] ptype = null;
-            Object retv = null;  // return value
+            String mname = null; // method name
+            Object[] plist = null; // parameter list
+            Class<?>[] ptype = null; // parameter type
+            Object retv;  // return value
 
             try
             {
@@ -399,11 +407,17 @@ public class Skeleton<T>
                 mname = (String) ois.readObject();
                 ptype = (Class <?>[]) ois.readObject();
                 plist = (Object[])ois.readObject();
+                readok = true;     // mark for the terminate not to close the socket
 
             }
-            catch (Exception e) // the exception from stop request
+            catch(IOException e)
             {
-                if(stop) return;
+                if(stopped) return; // if the exception is caused by socket close, return now
+            }
+            catch(Exception e) // the exception from stop request
+            {
+                System.out.println("ois oos failed");
+                e.printStackTrace();
             }
 
             try
@@ -426,13 +440,8 @@ public class Skeleton<T>
             }
             catch(Exception e) // if the invocation throws exception
             {
-                try
-                {
-                    oos.writeObject(e); // send back the exception
-                }
-                catch(Exception ee) {
-                    ee.printStackTrace();
-                }
+                System.out.println("skeleton write back failed.");
+                e.printStackTrace();
             }
 
             try
@@ -441,7 +450,9 @@ public class Skeleton<T>
                 oos.close();
                 socket.close();
             }
-            catch(Exception e) {}
+            catch(Exception e) {
+                System.out.println("skeleton close socket failed.");
+            }
         }
     }
 

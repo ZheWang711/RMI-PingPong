@@ -3,6 +3,7 @@ package rmi;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.*;
@@ -38,6 +39,8 @@ public class Skeleton<T>
 
     // a main thread "accept" incoming connection, and spawn subthreads to call method in para@ server
     private TCPListen tlisten = null;
+
+    private Class<T> c;
 
     // object implementing the common interface
     private T server = null;
@@ -92,6 +95,7 @@ public class Skeleton<T>
     {
         this.server = server;
         this.address = address;          // record the server address
+        this.c = c;
 
         // ---- checking ---
 
@@ -132,7 +136,7 @@ public class Skeleton<T>
 
 
         // checking whether the object passed in actually implemented the interface.
-        {
+        /*{
             boolean intf = false;
             // iterate over all interfaces of 'server'
             for(Class<?> cl : server.getClass().getInterfaces())
@@ -142,7 +146,7 @@ public class Skeleton<T>
                 }
             if(!intf)
                 throw new Error("The interface c cannot match with server.");
-        }
+        }*/
 
     }
 
@@ -293,6 +297,7 @@ public class Skeleton<T>
         private Skeleton<T> father;            // the Skeleton
         private List<SocketConn> tsockets = new ArrayList<SocketConn>();
         // all TCP connection thread lists, for joins when stop
+        private volatile Object lock = new Object();
 
         private TCPListen(ServerSocket socket, Skeleton<T> father)
         {
@@ -336,7 +341,7 @@ public class Skeleton<T>
 
                 if(conn != null)  // prevent the stop situation caused socket.close
                 {
-                    SocketConn tmp = new SocketConn(conn); //dispatch
+                    SocketConn tmp = new SocketConn(conn, father); //dispatch
                     tsockets.add(tmp);
                     tmp.start();
                 }
@@ -368,14 +373,16 @@ public class Skeleton<T>
         private Socket socket;
         private volatile boolean readok = false;
         private volatile boolean stopped = false;
+        private Skeleton<T> father = null;
 
 
-        private SocketConn(Socket socket)
+        private SocketConn(Socket socket, Skeleton<T> father)
         {
-            this.socket=socket;
+            this.socket = socket;
+            this.father = father;
         }
 
-        public void terminate()
+        private void terminate()
         {
             stopped = true;  // mark the stop
             try{
@@ -412,27 +419,59 @@ public class Skeleton<T>
             }
             catch(IOException e)
             {
+                System.out.println("aaaaa");
+                father.service_error(new RMIException("service thread error!"));
                 if(stopped) return; // if the exception is caused by socket close, return now
             }
-            catch(Exception e) // the exception from stop request
+            catch(Exception e)
             {
                 System.out.println("ois oos failed");
                 e.printStackTrace();
             }
 
+
             try
             {
-                Method m;
+                try{
 
-                try
-                {
-                    m = server.getClass().getMethod(mname, ptype);
-                    m.setAccessible(true);
-                    retv = m.invoke(server, plist);  // actual invocation
+                    Method m;
+
+                    // check whether the method is in the Skeleton interface
+                    {
+                        boolean ismethod = false;
+
+                        m = server.getClass().getMethod(mname, ptype);
+                        m.setAccessible(true);
+
+                        if(server.getClass().getDeclaringClass() != null)
+                            for(Field f : server.getClass().getDeclaringClass().getDeclaredFields()) {
+                                f.setAccessible(true);
+                            }
+                        else
+                            for(Field f : server.getClass().getDeclaredFields())
+                                f.setAccessible(true);
+
+                        for (Method me : c.getMethods())
+                            if (me.getName() == m.getName()) {
+                                ismethod = true;
+                                break;
+                            }
+
+                        if (!ismethod)
+                            throw new RMIException("Method is not in Skeleton interface.");
+                    }
+
+                    //synchronized (this){
+                        retv = m.invoke(server, plist);  // actual invocation
+                    //}
                 }
                 catch(InvocationTargetException e)
                 {
-                    retv = e.getTargetException(); // get the actual exception
+                    retv = e; // get the actual exception
+                }
+                catch(RMIException e)
+                {
+                    retv = e;
                 }
 
                 oos.writeObject(retv);

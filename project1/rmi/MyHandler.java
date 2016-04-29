@@ -1,6 +1,7 @@
 package rmi;
 
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.*;
 import java.io.*;
@@ -19,12 +20,14 @@ public class MyHandler implements InvocationHandler, Serializable{
     public MyHandler(InetSocketAddress address, Class<?> intfc) {
         this.address = address;
         this.intfc = intfc;
-
     }
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         Object res;
+        Socket socket = null;
+        ObjectOutputStream oos = null;
+        ObjectInputStream ois = null;
 
         if (method.getName() == "equals") { // equals method
             if (args[0] == null) {
@@ -43,8 +46,8 @@ public class MyHandler implements InvocationHandler, Serializable{
 
         else {
             try {
-                Socket socket = new Socket(this.address.getHostName(), this.address.getPort());
-                ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+                socket = new Socket(this.address.getHostName(), this.address.getPort());
+                oos = new ObjectOutputStream(socket.getOutputStream());
                 oos.flush();
                 oos.writeObject(method.getName());
                 oos.writeObject(method.getParameterTypes());
@@ -52,18 +55,27 @@ public class MyHandler implements InvocationHandler, Serializable{
                 while (socket.getInputStream().available() <= 0)
                     sleep(1);
 
-                ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+                ois = new ObjectInputStream(socket.getInputStream());
                 res = ois.readObject();
-                oos.close();
-                ois.close();
-                socket.close();
+                //oos.close();
+                //ois.close();
+                //socket.close();
             } catch (Exception e) {
                 throw new RMIException("communication fault");
+            } finally {
+                try {
+                    oos.close();
+                    ois.close();
+                    socket.close();
+                } catch (Exception e) {}
             }
 
-            if (res instanceof Exception) {
-                throw (Exception) res;
-            } else {
+            if (res instanceof InvocationTargetException) {
+                throw ((InvocationTargetException) res).getTargetException();
+            } else if (res instanceof RMIException){
+                throw (RMIException) res;
+            }
+            else{
                 return res;
             }
 

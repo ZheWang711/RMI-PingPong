@@ -1,6 +1,7 @@
 package rmi;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Field;
@@ -341,7 +342,7 @@ public class Skeleton<T>
 
                 if(conn != null)  // prevent the stop situation caused socket.close
                 {
-                    SocketConn tmp = new SocketConn(conn, father); //dispatch
+                    SocketConn tmp = new SocketConn(conn); //dispatch
                     tsockets.add(tmp);
                     tmp.start();
                 }
@@ -373,13 +374,11 @@ public class Skeleton<T>
         private Socket socket;
         private volatile boolean readok = false;
         private volatile boolean stopped = false;
-        private Skeleton<T> father = null;
 
 
-        private SocketConn(Socket socket, Skeleton<T> father)
+        private SocketConn(Socket socket)
         {
             this.socket = socket;
-            this.father = father;
         }
 
         private void terminate()
@@ -403,12 +402,13 @@ public class Skeleton<T>
 
             try
             {
+                //InputStream is = socket.getInputStream();
+
                 oos = new ObjectOutputStream(socket.getOutputStream());
                 oos.flush();
 
-                while (socket.getInputStream().available() <= 0)
-                    sleep(1);
-
+                //while (is.available() <= 0)
+                sleep(10);  // available is too slow
                 ois = new ObjectInputStream(socket.getInputStream());
 
                 mname = (String) ois.readObject();
@@ -419,14 +419,21 @@ public class Skeleton<T>
             }
             catch(IOException e)
             {
-                System.out.println("aaaaa");
-                father.service_error(new RMIException("service thread error!"));
+                //System.out.println("aaaaa");
+                Skeleton.this.service_error(new RMIException("service thread error!"));
                 if(stopped) return; // if the exception is caused by socket close, return now
+                try{
+                    socket.close();
+                } catch(Exception ee) {}
+                return;
             }
             catch(Exception e)
             {
                 System.out.println("ois oos failed");
                 e.printStackTrace();
+                try{
+                    socket.close();
+                } catch(Exception ee) {}
             }
 
 
@@ -477,10 +484,13 @@ public class Skeleton<T>
                 oos.writeObject(retv);
 
             }
-            catch(Exception e) // if the invocation throws exception
+            catch(Exception e)
             {
                 System.out.println("skeleton write back failed.");
                 e.printStackTrace();
+                try{
+                    socket.close();
+                } catch(Exception ee) {}
             }
 
             try

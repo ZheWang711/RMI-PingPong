@@ -52,8 +52,8 @@ public class MyHandler implements InvocationHandler, Serializable{
                 oos.writeObject(method.getName());
                 oos.writeObject(method.getParameterTypes());
                 oos.writeObject(args);
-                while (socket.getInputStream().available() <= 0)
-                    sleep(1);
+                //while (socket.getInputStream().available() <= 0)
+                sleep(10);   // available is too slow
 
                 ois = new ObjectInputStream(socket.getInputStream());
                 res = ois.readObject();

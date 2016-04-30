@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
-clear
+chmod +x DockerFiles/DataVolume/runServer.sh DockerFiles/DataVolume/runClient.sh
+
 sleep 1
 echo "----------starting testing----------"
 
 docker-machine create --driver virtualbox ZheHuiVM
 eval $(docker-machine env ZheHuiVM)
 
-clear
 sleep 1
 echo "----------building data volume image----------"
 docker build -t zhe/lab1dv ./DockerFiles/DataVolume/
@@ -16,7 +16,6 @@ docker build -t zhe/lab1dv ./DockerFiles/DataVolume/
 echo "----------building client & server image----------"
 docker build -t zhe/lab1cs ./DockerFiles/ClientServer/
 
-clear
 sleep 1
 echo "----------creating network----------"
 docker network create lab1test

@@ -1,4 +1,5 @@
 *This repository is under name `origin2`*
+documentation here: https://www.evernote.com/l/ArqkNsFtpKdDYKebnkaZQ4m1y00wWfoHlIc
 
 CSE 291E Distributed Systems Project One
 

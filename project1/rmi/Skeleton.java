@@ -245,7 +245,10 @@ public class Skeleton<T>
                 socket.bind(new InetSocketAddress("0.0.0.0", 0));
                 address = (InetSocketAddress) socket.getLocalSocketAddress();
             }
-            else socket.bind(address);  // if the address is assigned
+            else {
+                socket.bind(address);  // if the address is assigned
+                address = (InetSocketAddress) socket.getLocalSocketAddress();
+            }
         }
         catch(Exception e)
         {

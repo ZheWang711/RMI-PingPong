@@ -1,3 +1,5 @@
+*This repository is under name `origin2`*
+
 CSE 291E Distributed Systems Project One
 
 Yuning Hui - A53091905 - y3hui@ucsd.edu
